@@ -28,7 +28,7 @@ parser.add_argument('--outf', type=str, default='qm9/logs', metavar='N',
 parser.add_argument('--lr', type=float, default=1e-3, metavar='N',
                     help='learning rate')
 parser.add_argument('--nf', type=int, default=128, metavar='N',
-                    help='learning rate')
+                    help='number of features')
 parser.add_argument('--attention', type=int, default=1, metavar='N',
                     help='attention in the ae model')
 parser.add_argument('--n_layers', type=int, default=7, metavar='N',
@@ -59,7 +59,7 @@ dataloaders, charge_scale = dataset.retrieve_dataloaders(args.batch_size, args.n
 # compute mean and mean absolute deviation
 meann, mad = qm9_utils.compute_mean_mad(dataloaders, args.property)
 
-model = EGNN(in_node_nf=15, in_edge_nf=0, hidden_nf=args.nf, device=device,
+model = EGNN(in_node_nf=6, in_edge_nf=0, hidden_nf=args.nf, device=device,
                  n_layers=args.n_layers, coords_weight=1.0, attention=args.attention, node_attr=args.node_attr)
 
 print(model)
@@ -87,7 +87,7 @@ def train(epoch, loader, partition='train'):
         one_hot = data['one_hot'].to(device, dtype)
         charges = data['charges'].to(device, dtype)
         nodes = qm9_utils.preprocess_input(one_hot, charges, args.charge_power, charge_scale, device)
-        
+    
         nodes = nodes.view(batch_size * n_nodes, -1)
         # nodes = torch.cat([one_hot, charges], dim=1)
         edges = qm9_utils.get_adj_matrix(n_nodes, batch_size, device)
@@ -95,7 +95,6 @@ def train(epoch, loader, partition='train'):
 
         pred = model(h0=nodes, x=atom_positions, edges=edges, edge_attr=None, node_mask=atom_mask, edge_mask=edge_mask,
                      n_nodes=n_nodes)
-
 
         if partition == 'train':
             loss = loss_l1(pred, (label - meann) / mad)
