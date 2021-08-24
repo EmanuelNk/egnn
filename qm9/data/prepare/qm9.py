@@ -26,13 +26,16 @@ def download_dataset_qm9(datadir, dataname, splits=None, calculate_thermo=True, 
         'Downloading and processing GDB9 dataset. Output will be in directory: {}.'.format(gdb9dir))
 
     logging.info('Beginning download of GDB9 dataset!')
-    gdb9_url_data = 'https://springernature.figshare.com/ndownloader/files/3195389'
-    gdb9_tar_data = join(gdb9dir, 'dsgdb9nsd.xyz.tar.bz2')
+    # gdb9_url_data = 'https://springernature.figshare.com/ndownloader/files/3195389'
+    
+    # updated with our data
+    gdb9_url_data =  'https://drive.google.com/uc?id=1jusDBJ_63LWUotoSMeAMM_heIm-4uT_T' 
+    gdb9_tar_data = join(gdb9dir, 'data_xyz_files_as_qm9.tar.bz2')
     # gdb9_tar_file = join(gdb9dir, 'dsgdb9nsd.xyz.tar.bz2')
     # gdb9_tar_data =
     # tardata = tarfile.open(gdb9_tar_file, 'r')
     # files = tardata.getmembers()
-    urllib.request.urlretrieve(gdb9_url_data, filename=gdb9_tar_data)
+    urllib.request.urlretrieve(gdb9_url_data, filename=gdb9_tar_data) ###
     logging.info('GDB9 dataset downloaded successfully!')
 
     # If splits are not specified, automatically generate them.
