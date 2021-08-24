@@ -83,33 +83,38 @@ def gen_splits_gdb9(gdb9dir, cleanup=True):
     set.
     """
     logging.info('Splits were not specified! Automatically generating.')
-    gdb9_url_excluded = 'https://springernature.figshare.com/ndownloader/files/3195404'
-    gdb9_txt_excluded = join(gdb9dir, 'uncharacterized.txt')
-    urllib.request.urlretrieve(gdb9_url_excluded, filename=gdb9_txt_excluded)
+    # gdb9_url_excluded = 'https://springernature.figshare.com/ndownloader/files/3195404'
+    # gdb9_txt_excluded = join(gdb9dir, 'uncharacterized.txt')
+    # urllib.request.urlretrieve(gdb9_url_excluded, filename=gdb9_txt_excluded)
 
-    # First get list of excluded indices
-    excluded_strings = []
-    with open(gdb9_txt_excluded) as f:
-        lines = f.readlines()
-        excluded_strings = [line.split()[0]
-                            for line in lines if len(line.split()) > 0]
+    # # First get list of excluded indices
+    # excluded_strings = []
+    # with open(gdb9_txt_excluded) as f:
+    #     lines = f.readlines()
+    #     excluded_strings = [line.split()[0]
+    #                         for line in lines if len(line.split()) > 0]
 
-    excluded_idxs = [int(idx) - 1 for idx in excluded_strings if is_int(idx)]
+    # excluded_idxs = [int(idx) - 1 for idx in excluded_strings if is_int(idx)]
 
-    assert len(excluded_idxs) == 3054, 'There should be exactly 3054 excluded atoms. Found {}'.format(
-        len(excluded_idxs))
+    # assert len(excluded_idxs) == 3054, 'There should be exactly 3054 excluded atoms. Found {}'.format(
+    #     len(excluded_idxs))
 
-    # Now, create a list of indices
-    Ngdb9 = 133885
-    Nexcluded = 3054
+    # # Now, create a list of indices
+    # # Ngdb9 = 133885
+    Ngdb9 = 4823
+    # Nexcluded = 3054
 
+    # included_idxs = np.array(
+    #     sorted(list(set(range(Ngdb9)) - set(excluded_idxs))))
     included_idxs = np.array(
-        sorted(list(set(range(Ngdb9)) - set(excluded_idxs))))
+        sorted(list(set(range(Ngdb9)))))
 
     # Now generate random permutations to assign molecules to training/validation/test sets.
-    Nmols = Ngdb9 - Nexcluded
+    # Nmols = Ngdb9 - Nexcluded
+    Nmols = Ngdb9
 
-    Ntrain = 100000
+    # Ntrain = 100000
+    Ntrain = 4000
     Ntest = int(0.1*Nmols)
     Nvalid = Nmols - (Ntrain + Ntest)
 
@@ -133,7 +138,7 @@ def gen_splits_gdb9(gdb9dir, cleanup=True):
     splits = {'train': train, 'valid': valid, 'test': test}
 
     # Cleanup
-    cleanup_file(gdb9_txt_excluded, cleanup)
+    # cleanup_file(gdb9_txt_excluded, cleanup)
 
     return splits
 
@@ -175,7 +180,7 @@ def get_thermo_dict(gdb9dir, cleanup=True):
                                            ] = float(split_therm)
 
     # Cleanup file when finished.
-    cleanup_file(gdb9_txt_thermo, cleanup)
+    # cleanup_file(gdb9_txt_thermo, cleanup)
 
     return therm_energy
 

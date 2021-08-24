@@ -87,8 +87,6 @@ def train(epoch, loader, partition='train'):
         one_hot = data['one_hot'].to(device, dtype)
         charges = data['charges'].to(device, dtype)
         nodes = qm9_utils.preprocess_input(one_hot, charges, args.charge_power, charge_scale, device)
-
-        print(f"#### Nodes (H0 in the dataset): {nodes} ####")
         
         nodes = nodes.view(batch_size * n_nodes, -1)
         # nodes = torch.cat([one_hot, charges], dim=1)
