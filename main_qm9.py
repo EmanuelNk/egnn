@@ -14,7 +14,8 @@ parser.add_argument('--batch_size', type=int, default=96, metavar='N',
                     help='input batch size for training (default: 128)')
 parser.add_argument('--epochs', type=int, default=1000, metavar='N',
                     help='number of epochs to train (default: 10)')
-
+parser.add_argument('--early_stop', type=int, default=20, metavar='N',
+                    help='number of epochs to stop if there is no improvement in the valid-loss ')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='enables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
@@ -119,7 +120,7 @@ def train(epoch, loader, partition='train'):
 
 if __name__ == "__main__":
     res = {'epochs': [], 'losess': [], 'best_val': 1e10, 'best_test': 1e10, 'best_epoch': 0}
-
+    res_all = {'epochs': [],'val_losess': [], 'test_losess': []}
     for epoch in range(0, args.epochs):
         train(epoch, dataloaders['train'], partition='train')
         if epoch % args.test_interval == 0:
@@ -127,16 +128,28 @@ if __name__ == "__main__":
             test_loss = train(epoch, dataloaders['test'], partition='test')
             res['epochs'].append(epoch)
             res['losess'].append(test_loss)
-
+            res_all['epochs'].append(epoch)
+            res_all['test_losess'].append(test_loss)
+            res_all['val_losess'].append(val_loss)
+            
             if val_loss < res['best_val']:
                 res['best_val'] = val_loss
                 res['best_test'] = test_loss
                 res['best_epoch'] = epoch
             print("Val loss: %.4f \t test loss: %.4f \t epoch %d" % (val_loss, test_loss, epoch))
             print("Best: val loss: %.4f \t test loss: %.4f \t epoch %d" % (res['best_val'], res['best_test'], res['best_epoch']))
+            
+            if  epoch - res['best_epoch'] > args.early_stop:
+                break
 
 
         json_object = json.dumps(res, indent=4)
+        
         with open(args.outf + "/" + args.exp_name + "/losess.json", "w") as outfile:
+            outfile.write(json_object)
+          
+        json_object = json.dumps(res_all, indent=4)  
+        
+        with open(args.outf + "/" + args.exp_name + "/losess_full.json", "w") as outfile:
             outfile.write(json_object)
 
