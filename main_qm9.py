@@ -119,18 +119,18 @@ def train(epoch, loader, partition='train'):
 
 
 if __name__ == "__main__":
-    res = {'epochs': [], 'losess': [], 'best_val': 1e10, 'best_test': 1e10, 'best_epoch': 0}
-    res_all = {'epochs': [],'val_losess': [], 'test_losess': []}
+    res = {'epochs': [], 'losses': [], 'best_val': 1e10, 'best_test': 1e10, 'best_epoch': 0}
+    res_all = {'epochs': [],'val_losses': [], 'test_losses': []}
     for epoch in range(0, args.epochs):
         train(epoch, dataloaders['train'], partition='train')
         if epoch % args.test_interval == 0:
             val_loss = train(epoch, dataloaders['valid'], partition='valid')
             test_loss = train(epoch, dataloaders['test'], partition='test')
             res['epochs'].append(epoch)
-            res['losess'].append(test_loss)
+            res['losses'].append(test_loss)
             res_all['epochs'].append(epoch)
-            res_all['test_losess'].append(test_loss)
-            res_all['val_losess'].append(val_loss)
+            res_all['test_losses'].append(test_loss)
+            res_all['val_losses'].append(val_loss)
             
             if val_loss < res['best_val']:
                 res['best_val'] = val_loss
@@ -145,11 +145,11 @@ if __name__ == "__main__":
 
         json_object = json.dumps(res, indent=4)
         
-        with open(args.outf + "/" + args.exp_name + "/losess.json", "w") as outfile:
+        with open(args.outf + "/" + args.exp_name + "/losses.json", "w") as outfile:
             outfile.write(json_object)
           
         json_object = json.dumps(res_all, indent=4)  
         
-        with open(args.outf + "/" + args.exp_name + "/losess_full.json", "w") as outfile:
+        with open(args.outf + "/" + args.exp_name + "/losses_full.json", "w") as outfile:
             outfile.write(json_object)
 
