@@ -150,3 +150,4 @@ push.sh
 *temp*
 qm9/lie_conv/data/*
 *cache/trans_Q/mutex*
+Results/plot_sys.py

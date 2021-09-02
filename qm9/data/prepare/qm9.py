@@ -29,7 +29,10 @@ def download_dataset_qm9(datadir, dataname, splits=None, calculate_thermo=True, 
     # gdb9_url_data = 'https://springernature.figshare.com/ndownloader/files/3195389'
     
     # updated with our data
-    gdb9_url_data =  'https://drive.google.com/uc?id=1jusDBJ_63LWUotoSMeAMM_heIm-4uT_T' 
+    
+    # gdb9_url_data =  'https://drive.google.com/uc?id=1jusDBJ_63LWUotoSMeAMM_heIm-4uT_T'  #unshuffled
+    gdb9_url_data =  'https://drive.google.com/uc?id=15EG8SOm0T2ytX-Wr_Xn6p7S7jacAqKV3'  #shuffled 
+
     gdb9_tar_data = join(gdb9dir, 'data_xyz_files_as_qm9.tar.bz2')
     # gdb9_tar_file = join(gdb9dir, 'dsgdb9nsd.xyz.tar.bz2')
     # gdb9_tar_data =
