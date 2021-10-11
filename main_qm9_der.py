@@ -69,6 +69,22 @@ optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_
 lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs)
 loss_l1 = nn.L1Loss()
 
+def compute_grad(input, model):
+    input.requires_grad_(True)
+    grad = []
+    output = model(input)
+    for i in range(output.size(1)):
+        grad.append(
+            torch.autograd.grad(
+                outputs=output[:, i],
+                inputs=input,
+                grad_outputs=torch.ones(len(input)),
+                retain_graph=True, 
+                create_graph=True
+            )[0]
+        )
+    input.requires_grad_(False)
+    return torch.stack(grad)
 
 def train(epoch, loader, partition='train'):
     lr_scheduler.step()
@@ -93,24 +109,31 @@ def train(epoch, loader, partition='train'):
         # nodes = torch.cat([one_hot, charges], dim=1)
         edges = qm9_utils.get_adj_matrix(n_nodes, batch_size, device)
         label = data[args.property].to(device, dtype)
-
+        atom_positions.requires_grad_(True)
         pred = model(h0=nodes, x=atom_positions, edges=edges, edge_attr=None, node_mask=atom_mask, edge_mask=edge_mask,
                      n_nodes=n_nodes)
 
         if partition == 'train':
             loss = loss_l1(pred, (label - meann) / mad)
-            op = pred
             """
             shapes:
                 batch_size:         [1]
                 atop_positions :    [27*batch_size, 3]
                 pred :              [batch_size]
-                
             """
-            atom_positions.requires_grad_(True)
-            # pred.requires_grad_(True)
-            dop_dx = torch.autograd.grad(pred, atom_positions, allow_unused=True,  retain_graph=True)[0]
-            print(dop_dx)
+            
+            grad = []
+            grad.append(torch.autograd.grad(
+                outputs=pred,
+                inputs=atom_positions,
+                # grad_outputs=torch.ones(len(atom_positions)), --> RuntimeError: Mismatch in shape: grad_output[0] has a shape of torch.Size([27]) and output[0] has a shape of torch.Size([1]).
+                allow_unused=True, # was set because of: RuntimeError: One of the differentiated Tensors appears to not have been used in the graph. Set allow_unused=True if this is the desired behavior.
+                retain_graph=True, 
+                create_graph=True)[0])
+            # print(f'grads: {len(grad[0])}')
+            atom_positions.requires_grad_(False)
+            dop_dx = torch.stack(grad) # grad is None---> TypeError: expected Tensor as element 0 in argument 0, but got NoneType
+            print(f"derivative: {dop_dx}, Molecule: {atom_positions}")
             loss.backward()
             optimizer.step()
         else:
