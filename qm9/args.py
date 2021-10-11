@@ -55,8 +55,8 @@ def setup_shared_args(parser):
     # Saving and logging options
     parser.add_argument('--save', action=BoolArg, default=True,
                         help='Save checkpoint after each epoch. (default: True)')
-    parser.add_argument('--load', action=BoolArg, default=False,
-                        help='Load from previous checkpoint. (default: False)')
+    parser.add_argument('--load', action=BoolArg, default=True,
+                        help='Load from previous checkpoint. (default: True)')
 
     parser.add_argument('--test', action=BoolArg, default=True,
                         help='Perform automated network testing. (Default: True)')
@@ -72,8 +72,8 @@ def setup_shared_args(parser):
 
     ### Arguments for files to save things to
     # Job prefix is used to name checkpoint/best file
-    parser.add_argument('--prefix', '--jobname', type=str, default='nosave',
-                        help='Prefix to set load, save, and logfile. (default: nosave)')
+    parser.add_argument('--prefix', '--jobname', type=str, default='save',
+                        help='Prefix to set load, save, and logfile. (default: save)')
 
     # Allow to manually specify file to load
     parser.add_argument('--loadfile', type=str, default='',
