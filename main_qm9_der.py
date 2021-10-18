@@ -10,6 +10,8 @@ import json
 parser = argparse.ArgumentParser(description='QM9 Example')
 parser.add_argument('--exp_name', type=str, default='exp_1', metavar='N',
                     help='experiment_name')
+parser.add_argument('--force_weight', type=int, default=100, metavar='N',
+                    help='force loss weight in the final loss')
 parser.add_argument('--load_chkpnt', type=bool, default=False, metavar='N',
                     help='load checkpoint')
 parser.add_argument('--batch_size', type=int, default=96, metavar='N',
@@ -71,16 +73,16 @@ optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_
 lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs)
 loss_l1 = nn.L1Loss()
 
-def loss_FE(pred, label, meann, mad, force, der, l1_weight = 1, fe_weight = 1, training = True):
+def loss_FE(pred, label, meann, mad, force, der, training = True):
     
     if training:
         l1 = loss_l1(pred, (label - meann) / mad)
     else:
         l1 = loss_l1(mad * pred + meann, label)
         
-    fe_loss = torch.mean((force - der)**2)*1000
-    loss = (l1_weight * l1) + (fe_weight * fe_loss)
-    print(f"l1 loss: {l1}\tforce loss: {fe_loss}", end='\r')
+    fe_loss = torch.mean((force - der)**2)
+    loss = (l1) + (args.force_weight * fe_loss)
+    print(f"\rl1 loss: {l1}\tforce loss: {fe_loss}\n", end="")
     
     return loss
 
@@ -146,18 +148,25 @@ def train(epoch, loader, partition='train'):
                 allow_unused=True, 
                 retain_graph=True, 
                 create_graph=True)[0])
-            # print(f'grads: {len(grad[0])}')
             atom_positions.requires_grad_(False)
             dop_dx = torch.stack(grad) 
-            
-            # loss = loss_l1(pred, (label - meann) / mad)
+
             loss = loss_FE(pred, label, meann, mad, forces, dop_dx)
             
-            # print(f"derivative: {dop_dx}, Molecule: {atom_positions}")
             loss.backward()
             optimizer.step()
         else:
-            # loss = loss_l1(mad * pred + meann, label)
+            grad = []
+            grad.append(torch.autograd.grad(
+                outputs=pred,
+                inputs=atom_positions,
+                grad_outputs=torch.ones_like(pred),
+                allow_unused=True, 
+                retain_graph=True, 
+                create_graph=True)[0])
+            atom_positions.requires_grad_(False)
+            dop_dx = torch.stack(grad)
+            
             loss = loss_FE(pred, label, meann, mad, forces, dop_dx, training = False)
 
 
