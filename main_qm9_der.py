@@ -82,7 +82,7 @@ def loss_FE(pred, label, meann, mad, force, der, training = True):
         
     fe_loss = torch.mean((force - der)**2)
     loss = (l1) + (args.force_weight * fe_loss)
-    print(f"\rl1 loss: {l1}\tforce loss: {fe_loss}\n", end="")
+    print(f"\rl1 loss: {l1}\tforce loss: {fe_loss}\t", end="")
     
     return loss
 
