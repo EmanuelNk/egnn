@@ -2,9 +2,44 @@ import logging
 import os
 import torch
 import tarfile
+import re
+import sys, os
+import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 
 charge_dict = {'H': 1, 'C': 6, 'N': 7, 'O': 8, 'F': 9}
+
+def get_force_by_filename(path):
+
+    start = 0
+
+    pattern1 = "\[(.*?)\]\]"
+    pattern2 = "\[(.*?)\]"
+    pattern3 = "\[\[(.*?)\]"
+    new_path = path.replace('.out.xyz','.xyz')
+    a = []
+    
+    with open(new_path)as f:
+        for line in f:
+            if ']]' in line.upper():
+                start = 0
+                a_string = re.search(pattern1, line).group(1)
+                a_list = a_string.split()
+                map_object = map(float, a_list)
+                a.append(list(map_object))
+            elif start:
+                a_string = re.search(pattern2, line).group(1)
+                a_list = a_string.split()
+                map_object = map(float, a_list)
+                a.append(list(map_object))
+            elif '[[' in line.upper():
+                start = 1
+                a_string = re.search(pattern3, line).group(1)
+                a_list = a_string.split()
+                map_object = map(float, a_list)
+                a.append(list(map_object))
+    a_ = np.array(a)
+    return  torch.from_numpy(a_)
 
 
 def split_dataset(data, split_idxs):
@@ -85,9 +120,14 @@ def process_xyz_files(data, process_file_fn, file_ext=None, file_idx_list=None, 
 
     molecules = []
 
+    pattern = "\'(.*?)\'"
+    
     for file in files:
-        with readfile(file) as openfile:
-            molecules.append(process_file_fn(openfile))
+        filename = re.search(pattern, str(file)).group(1)
+        if filename.endswith('.xyz'):
+            with readfile(file) as openfile:
+                molecules.append(process_file_fn(openfile, filename))
+            
 
     # Check that all molecules have the same set of items in their dictionary:
     props = molecules[0].keys()
@@ -95,6 +135,7 @@ def process_xyz_files(data, process_file_fn, file_ext=None, file_idx_list=None, 
 
     # Convert list-of-dicts to dict-of-lists
     molecules = {prop: [mol[prop] for mol in molecules] for prop in props}
+    # print(molecules)
 
     # If stacking is desireable, pad and then stack.
     if stack:
@@ -158,7 +199,7 @@ def process_xyz_md17(datafile):
     return molecule
 
 
-def process_xyz_gdb9(datafile):
+def process_xyz_gdb9(datafile, filename):
     """
     Read xyz file and return a molecular dict with number of atoms, energy, forces, coordinates and atom-type for the gdb9 dataset.
 
@@ -176,6 +217,9 @@ def process_xyz_gdb9(datafile):
     -----
     TODO : Replace breakpoint with a more informative failure?
     """
+    force_path = os.path.join(sys.path[0] , 'qm9', 'temp', 'qm9', 'data_xyz_files')
+    forces = get_force_by_filename(os.path.join(force_path, filename))
+    
     xyz_lines = [line.decode('UTF-8') for line in datafile.readlines()]
 
     num_atoms = int(xyz_lines[0])
@@ -195,7 +239,7 @@ def process_xyz_gdb9(datafile):
     mol_props = dict(zip(prop_strings, mol_props))
     mol_props['omega1'] = max(float(omega) for omega in mol_freq.split())
 
-    molecule = {'num_atoms': num_atoms, 'charges': atom_charges, 'positions': atom_positions}
+    molecule = {'num_atoms': num_atoms, 'charges': atom_charges, 'positions': atom_positions, 'forces': forces}
     molecule.update(mol_props)
     molecule = {key: torch.tensor(val) for key, val in molecule.items()}
 

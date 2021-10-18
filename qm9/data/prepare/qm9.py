@@ -4,9 +4,12 @@ import torch
 import logging
 import os
 import urllib
+import sys
 
 from os.path import join as join
 import urllib.request
+
+import zipfile
 
 from qm9.data.prepare.process import process_xyz_files, process_xyz_gdb9
 from qm9.data.prepare.utils import download_data, is_int, cleanup_file
@@ -31,15 +34,24 @@ def download_dataset_qm9(datadir, dataname, splits=None, calculate_thermo=True, 
     # updated with our data
     
     # gdb9_url_data =  'https://drive.google.com/uc?id=1jusDBJ_63LWUotoSMeAMM_heIm-4uT_T'  #unshuffled
-    gdb9_url_data =  'https://drive.google.com/uc?id=15EG8SOm0T2ytX-Wr_Xn6p7S7jacAqKV3'  #shuffled 
+    gdb9_url_data =  'https://drive.google.com/uc?id=1QwaQ86yTFHU5bjrVKPjukGBmu5ljlW7i'    #clenaer data
+    force_url_data =     'https://drive.google.com/uc?id=1G9nqDvs29VYDiJ2oUlfR-pAo_pxZrsAv'    # data xys files (forces) 
 
     gdb9_tar_data = join(gdb9dir, 'data_xyz_files_as_qm9.tar.bz2')
+    force_zip_data  = join(gdb9dir, 'data_xyz_files.zip')
     # gdb9_tar_file = join(gdb9dir, 'dsgdb9nsd.xyz.tar.bz2')
     # gdb9_tar_data =
     # tardata = tarfile.open(gdb9_tar_file, 'r')
     # files = tardata.getmembers()
     urllib.request.urlretrieve(gdb9_url_data, filename=gdb9_tar_data) ###
     logging.info('GDB9 dataset downloaded successfully!')
+    
+    urllib.request.urlretrieve(force_url_data, filename=force_zip_data) ###
+    logging.info('forces dataset downloaded successfully!')
+    
+    extraction_dir = os.path.join(sys.path[0] , 'qm9', 'temp', 'qm9')
+    with zipfile.ZipFile(force_zip_data, 'r') as zip_ref:
+        zip_ref.extractall(extraction_dir)
 
     # If splits are not specified, automatically generate them.
     if splits is None:

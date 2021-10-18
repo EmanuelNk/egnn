@@ -10,7 +10,9 @@ import json
 parser = argparse.ArgumentParser(description='QM9 Example')
 parser.add_argument('--exp_name', type=str, default='exp_1', metavar='N',
                     help='experiment_name')
-parser.add_argument('--batch_size', type=int, default=1, metavar='N',
+parser.add_argument('--load_chkpnt', type=bool, default=False, metavar='N',
+                    help='load checkpoint')
+parser.add_argument('--batch_size', type=int, default=96, metavar='N',
                     help='input batch size for training (default: 128)')
 parser.add_argument('--epochs', type=int, default=1000, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -69,6 +71,19 @@ optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_
 lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs)
 loss_l1 = nn.L1Loss()
 
+def loss_FE(pred, label, meann, mad, force, der, l1_weight = 1, fe_weight = 1, training = True):
+    
+    if training:
+        l1 = loss_l1(pred, (label - meann) / mad)
+    else:
+        l1 = loss_l1(mad * pred + meann, label)
+        
+    fe_loss = torch.mean((force - der)**2)*1000
+    loss = (l1_weight * l1) + (fe_weight * fe_loss)
+    print(f"l1 loss: {l1}\tforce loss: {fe_loss}", end='\r')
+    
+    return loss
+
 def compute_grad(input, model):
     input.requires_grad_(True)
     grad = []
@@ -96,9 +111,12 @@ def train(epoch, loader, partition='train'):
 
         else:
             model.eval()
+        
 
         batch_size, n_nodes, _ = data['positions'].size()
+        forces = data['forces'].view(batch_size * n_nodes, -1).to(device, dtype)
         atom_positions = data['positions'].view(batch_size * n_nodes, -1).to(device, dtype)
+        # print(f"forces shape: {forces.size()}, atom positions shape: {atom_positions.size()}")
         atom_mask = data['atom_mask'].view(batch_size * n_nodes, -1).to(device, dtype)
         edge_mask = data['edge_mask'].to(device, dtype)
         one_hot = data['one_hot'].to(device, dtype)
@@ -114,30 +132,33 @@ def train(epoch, loader, partition='train'):
                      n_nodes=n_nodes)
 
         if partition == 'train':
-            loss = loss_l1(pred, (label - meann) / mad)
             """
             shapes:
                 batch_size:         [1]
                 atop_positions :    [27*batch_size, 3]
                 pred :              [batch_size]
             """
-            
             grad = []
             grad.append(torch.autograd.grad(
                 outputs=pred,
                 inputs=atom_positions,
-                # grad_outputs=torch.ones(len(atom_positions)), --> RuntimeError: Mismatch in shape: grad_output[0] has a shape of torch.Size([27]) and output[0] has a shape of torch.Size([1]).
-                allow_unused=True, # was set because of: RuntimeError: One of the differentiated Tensors appears to not have been used in the graph. Set allow_unused=True if this is the desired behavior.
+                grad_outputs=torch.ones_like(pred),
+                allow_unused=True, 
                 retain_graph=True, 
                 create_graph=True)[0])
             # print(f'grads: {len(grad[0])}')
             atom_positions.requires_grad_(False)
-            dop_dx = torch.stack(grad) # grad is None---> TypeError: expected Tensor as element 0 in argument 0, but got NoneType
-            print(f"derivative: {dop_dx}, Molecule: {atom_positions}")
+            dop_dx = torch.stack(grad) 
+            
+            # loss = loss_l1(pred, (label - meann) / mad)
+            loss = loss_FE(pred, label, meann, mad, forces, dop_dx)
+            
+            # print(f"derivative: {dop_dx}, Molecule: {atom_positions}")
             loss.backward()
             optimizer.step()
         else:
-            loss = loss_l1(mad * pred + meann, label)
+            # loss = loss_l1(mad * pred + meann, label)
+            loss = loss_FE(pred, label, meann, mad, forces, dop_dx, training = False)
 
 
         res['loss'] += loss.item() * batch_size

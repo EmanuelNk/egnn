@@ -1,4 +1,6 @@
 import torch
+import re 
+import numpy as np
 
 def compute_mean_mad(dataloaders, label_property):
     for key in dataloaders:
@@ -36,3 +38,33 @@ def preprocess_input(one_hot, charges, charge_power, charge_scale, device):
     charge_tensor = charge_tensor.view(charges.shape + (1, charge_power + 1))
     atom_scalars = (one_hot.unsqueeze(-1) * charge_tensor).view(charges.shape[:2] + (-1,))
     return atom_scalars
+
+def get_force_by_filename(path):
+
+    start = 0
+    pattern1 = "\[(.*?)\]\]"
+    pattern2 = "\[(.*?)\]"
+    pattern3 = "\[\[(.*?)\]"
+    new_path = path.replace('.out.xyz','.xyz')
+    a = []
+    
+    with open(new_path)as f:
+        for line in f:
+            if ']]' in line.upper():
+                start = 0
+                a_string = re.search(pattern1, line).group(1)
+                a_list = a_string.split()
+                map_object = map(float, a_list)
+                a.append(list(map_object))
+            elif start:
+                a_string = re.search(pattern2, line).group(1)
+                a_list = a_string.split()
+                map_object = map(float, a_list)
+                a.append(list(map_object))
+            elif '[[' in line.upper():
+                start = 1
+                a_string = re.search(pattern3, line).group(1)
+                a_list = a_string.split()
+                map_object = map(float, a_list)
+                a.append(list(map_object))
+    return np.array(a)
